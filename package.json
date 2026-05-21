@@ -1,0 +1,11 @@
+{
+  "name": "seoul-hotplace-live-check",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

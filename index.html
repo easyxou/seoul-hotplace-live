@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>지금 가도 돼? | 서울 핫플 실시간 체크</title>
+  <meta name="description" content="서울 주요 장소의 실시간 혼잡도, 날씨, 교통 정보를 확인하는 모바일 웹페이지" />
+  <style>
+    :root {
+      --bg: #f6f1ea;
+      --text: #1c1917;
+      --muted: #78716c;
+      --card: rgba(255,255,255,.84);
+      --line: rgba(255,255,255,.9);
+      --shadow: 0 18px 45px rgba(120,113,108,.25);
+      --soft-shadow: 0 10px 24px rgba(120,113,108,.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.95), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(214,211,209,.62), transparent 32%),
+        var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 22px 16px 30px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      font-size: 11px;
+      letter-spacing: .24em;
+      color: #78716c;
+      font-weight: 850;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      letter-spacing: -0.06em;
+      line-height: 1;
+      font-weight: 950;
+    }
+
+    .refresh-top {
+      width: 46px;
+      height: 46px;
+      border: 1px solid rgba(214,211,209,.8);
+      border-radius: 18px;
+      background: rgba(255,255,255,.78);
+      box-shadow: var(--soft-shadow);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      color: #292524;
+      font-size: 21px;
+      font-weight: 900;
+    }
+
+    .refresh-top:disabled { opacity: .55; cursor: not-allowed; }
+
+    .search-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 32px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      margin-bottom: 14px;
+      animation: rise .45s ease both;
+    }
+
+    .search-box {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 24px;
+      background: #f5f5f4;
+      padding: 0 14px;
+    }
+
+    .search-box input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #292524;
+      font-size: 14px;
+      font-weight: 680;
+    }
+
+    .search-box input::placeholder { color: #a8a29e; font-weight: 650; }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 12px 0 2px;
+      scrollbar-width: none;
+    }
+
+    .chips::-webkit-scrollbar { display: none; }
+
+    .chip {
+      white-space: nowrap;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: #f5f5f4;
+      color: #57534e;
+      font-weight: 850;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .chip.active { background: #1c1917; color: #fff; }
+
+    .notice {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin: 0 0 14px;
+      padding: 13px 14px;
+      border-radius: 24px;
+      border: 1px solid #bbf7d0;
+      background: #f0fdf4;
+      color: #166534;
+      font-size: 12px;
+      line-height: 1.55;
+      font-weight: 680;
+    }
+
+    .notice b { font-weight: 950; }
+
+    .error {
+      display: none;
+      gap: 8px;
+      align-items: flex-start;
+      margin: 0 0 14px;
+      padding: 13px 14px;
+      border-radius: 24px;
+      border: 1px solid #fde68a;
+      background: #fffbeb;
+      color: #92400e;
+      font-size: 12px;
+      line-height: 1.55;
+      font-weight: 680;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      min-height: 310px;
+      border-radius: 36px;
+      padding: 22px;
+      color: #fff;
+      background: linear-gradient(135deg, #38bdf8, #3b82f6 45%, #6366f1);
+      box-shadow: 0 24px 60px rgba(120,113,108,.35);
+      animation: scaleIn .45s ease both;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      right: -45px;
+      top: -55px;
+      width: 155px;
+      height: 155px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      filter: blur(12px);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      left: -70px;
+      bottom: -85px;
+      width: 210px;
+      height: 210px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.11);
+      filter: blur(16px);
+    }
+
+    .hero.ok { background: linear-gradient(135deg, #34d399, #14b8a6 45%, #22d3ee); }
+    .hero.normal { background: linear-gradient(135deg, #38bdf8, #3b82f6 45%, #6366f1); }
+    .hero.busy { background: linear-gradient(135deg, #fcd34d, #fb923c 45%, #fb7185); }
+    .hero.very-busy { background: linear-gradient(135deg, #fb7185, #ef4444 45%, #f97316); }
+
+    .hero-content { position: relative; z-index: 2; }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .area-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.2);
+      backdrop-filter: blur(12px);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .hero h2 {
+      margin: 12px 0 0;
+      font-size: 38px;
+      line-height: 1.05;
+      letter-spacing: -0.065em;
+      font-weight: 950;
+    }
+
+    .status-badge {
+      min-width: 68px;
+      padding: 10px 12px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.2);
+      backdrop-filter: blur(12px);
+      text-align: center;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .status-badge .emoji {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 2px;
+    }
+
+    .score-box {
+      margin-top: 26px;
+      padding: 16px;
+      border-radius: 28px;
+      background: rgba(255,255,255,.18);
+      backdrop-filter: blur(14px);
+    }
+
+    .score-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 12px;
+      font-weight: 950;
+      opacity: .94;
+    }
+
+    .bar {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.26);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 999px;
+      background: #fff;
+      transition: width .75s ease;
+    }
+
+    .message {
+      margin: 14px 0 0;
+      font-size: 14px;
+      line-height: 1.65;
+      font-weight: 720;
+      color: rgba(255,255,255,.96);
+    }
+
+    .hero-bottom {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 15px;
+      font-size: 11px;
+      font-weight: 800;
+      color: rgba(255,255,255,.84);
+    }
+
+    .main-button {
+      width: 100%;
+      height: 56px;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 24px;
+      background: #1c1917;
+      color: white;
+      box-shadow: 0 16px 30px rgba(120,113,108,.28);
+      font-size: 14px;
+      font-weight: 950;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .main-button:disabled { opacity: .5; cursor: not-allowed; }
+
+    .details {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .detail {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.86);
+      border-radius: 28px;
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 9px 18px rgba(120,113,108,.10);
+      animation: rise .45s ease both;
+    }
+
+    .detail:nth-child(2) { animation-delay: .03s; }
+    .detail:nth-child(3) { animation-delay: .06s; }
+    .detail:nth-child(4) { animation-delay: .09s; }
+    .detail:nth-child(5) { animation-delay: .12s; }
+
+    .detail-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 18px;
+      background: #f5f5f4;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: #44403c;
+      font-size: 20px;
+    }
+
+    .detail-text { min-width: 0; flex: 1; }
+
+    .detail-title {
+      margin: 0 0 3px;
+      font-size: 11px;
+      color: #a8a29e;
+      font-weight: 950;
+    }
+
+    .detail-value {
+      margin: 0;
+      color: #292524;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 780;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .insta {
+      margin-top: 14px;
+      padding: 20px;
+      border-radius: 32px;
+      background: #1c1917;
+      color: white;
+      box-shadow: var(--shadow);
+    }
+
+    .insta-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 10px;
+      font-size: 18px;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .insta p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.65;
+      color: rgba(255,255,255,.86);
+      font-weight: 650;
+    }
+
+    footer {
+      padding: 18px 0 0;
+      text-align: center;
+      color: #a8a29e;
+      font-size: 11px;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .spin { animation: spin .8s linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: translateY(10px) scale(.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (min-width: 431px) {
+      body { background-color: #e7e5e4; }
+      .app {
+        margin-top: 14px;
+        margin-bottom: 14px;
+        min-height: calc(100vh - 28px);
+        border-radius: 38px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <p class="eyebrow">SEOUL LIVE CHECK</p>
+        <h1>지금 가도 돼?</h1>
+      </div>
+      <button class="refresh-top" id="topRefresh" aria-label="새로고침">
+        <span id="topRefreshIcon">↻</span>
+      </button>
+    </header>
+
+    <section class="search-card">
+      <div class="search-box">
+        <span>⌕</span>
+        <input id="searchInput" type="text" placeholder="성수, 홍대, 명동 검색" />
+      </div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <div class="notice">
+      <span>✓</span>
+      <span>
+        <b>API 키 숨김 처리 버전</b><br />
+        브라우저가 서울시 API를 직접 부르지 않고, Vercel 서버리스 함수가 대신 불러와요.
+      </span>
+    </div>
+
+    <div class="error" id="errorBox">
+      <span>!</span>
+      <span id="errorText"></span>
+    </div>
+
+    <section class="hero normal" id="hero">
+      <div class="hero-content">
+        <div class="hero-top">
+          <div>
+            <div class="area-pill">⌖ <span id="areaName">광화문·덕수궁</span></div>
+            <h2 id="mainLabel">조회 준비중</h2>
+          </div>
+          <div class="status-badge">
+            <span class="emoji" id="statusEmoji">🔵</span>
+            <span id="statusBadge">대기</span>
+          </div>
+        </div>
+
+        <div class="score-box">
+          <div class="score-head">
+            <span>외출 추천 점수</span>
+            <span id="scoreText">76/100</span>
+          </div>
+          <div class="bar">
+            <div class="bar-fill" id="barFill"></div>
+          </div>
+          <p class="message" id="message">
+            실시간 데이터를 불러오는 중이에요.
+          </p>
+        </div>
+
+        <div class="hero-bottom">
+          <span id="timeText">조회 전</span>
+          <span id="trendText">현재 기준</span>
+        </div>
+      </div>
+    </section>
+
+    <button class="main-button" id="mainRefresh">
+      <span id="mainRefreshIcon">↻</span>
+      <span id="mainRefreshText">실시간 조회하기</span>
+    </button>
+
+    <section class="details" id="details"></section>
+
+    <section class="insta">
+      <h3 class="insta-title">✦ 인스타 소개 문구</h3>
+      <p>
+        “성수 지금 사람 많아? 홍대 지금 가도 돼? 서울 핫플 혼잡도, 날씨, 교통 상황을 한 페이지에서 확인해보세요.”
+      </p>
+    </section>
+
+    <footer>
+      서울시 실시간 도시데이터 API 기반<br />
+      공개 배포 시 API 키는 Vercel 환경변수로 보호
+    </footer>
+  </main>
+
+  <script>
+    const places = [
+      { poi: "POI068", name: "성수카페거리" },
+      { poi: "POI007", name: "홍대 관광특구" },
+      { poi: "POI003", name: "명동 관광특구" },
+      { poi: "POI009", name: "광화문·덕수궁" },
+      { poi: "POI001", name: "강남 MICE 관광특구" },
+      { poi: "POI014", name: "강남역" },
+      { poi: "POI071", name: "압구정로데오거리" },
+      { poi: "POI073", name: "연남동" },
+      { poi: "POI066", name: "북촌한옥마을" },
+      { poi: "POI078", name: "인사동" },
+      { poi: "POI072", name: "여의도" },
+      { poi: "POI002", name: "동대문 관광특구" },
+      { poi: "POI064", name: "덕수궁길·정동길" }
+    ];
+
+    let selectedPoi = "POI068";
+    let cache = {};
+
+    const $ = (id) => document.getElementById(id);
+
+    const detailsDefault = {
+      area: "성수카페거리",
+      status: "보통",
+      score: 76,
+      message: "실시간 데이터를 불러오는 중이에요.",
+      population: "조회 중",
+      time: "조회 전",
+      weather: "조회 중",
+      air: "조회 중",
+      transit: "조회 중",
+      bike: "조회 중",
+      event: "조회 중",
+      trend: "현재 기준"
+    };
+
+    function selectedPlace() {
+      return places.find((place) => place.poi === selectedPoi) || places[0];
+    }
+
+    function normalizeStatus(status = "보통") {
+      const compact = String(status).replace(/\s/g, "");
+      if (compact.includes("붐빔") && !compact.includes("약간")) return "붐빔";
+      if (compact.includes("약간")) return "약간 붐빔";
+      if (compact.includes("여유")) return "여유";
+      return "보통";
+    }
+
+    function statusMeta(status) {
+      const normalized = normalizeStatus(status);
+      const map = {
+        "여유": { label: "지금 가기 좋음", badge: "여유", emoji: "🟢", className: "ok" },
+        "보통": { label: "무난하게 가능", badge: "보통", emoji: "🔵", className: "normal" },
+        "약간 붐빔": { label: "조금 붐빌 수 있음", badge: "약간 붐빔", emoji: "🟡", className: "busy" },
+        "붐빔": { label: "가능하면 피하기", badge: "붐빔", emoji: "🔴", className: "very-busy" }
+      };
+      return map[normalized] || map["보통"];
+    }
+
+    function renderChips() {
+      const query = $("searchInput").value.trim();
+      const filtered = query ? places.filter((place) => place.name.includes(query)) : places;
+      $("chips").innerHTML = "";
+
+      filtered.forEach((place) => {
+        const chip = document.createElement("button");
+        chip.className = `chip ${selectedPoi === place.poi ? "active" : ""}`;
+        chip.textContent = place.name;
+        chip.addEventListener("click", () => {
+          selectedPoi = place.poi;
+          hideError();
+          render();
+          fetchLiveData();
+        });
+        $("chips").appendChild(chip);
+      });
+    }
+
+    function displayData() {
+      return cache[selectedPoi] || {
+        ...detailsDefault,
+        area: selectedPlace().name,
+        message: `${selectedPlace().name} 실시간 데이터를 불러오기 전이에요. 아래 버튼을 눌러 확인해보세요.`
+      };
+    }
+
+    function renderDetails(data) {
+      const items = [
+        { icon: "👥", title: "현재 인구", value: data.population },
+        { icon: "☁️", title: "날씨/대기", value: `${data.weather} · ${data.air}` },
+        { icon: "🚇", title: "교통", value: data.transit },
+        { icon: "🚲", title: "따릉이", value: data.bike },
+        { icon: "🗓️", title: "행사", value: data.event }
+      ];
+
+      $("details").innerHTML = items.map((item) => `
+        <article class="detail">
+          <div class="detail-icon">${item.icon}</div>
+          <div class="detail-text">
+            <p class="detail-title">${item.title}</p>
+            <p class="detail-value">${item.value}</p>
+          </div>
+          <div style="color:#d6d3d1;font-weight:900;">›</div>
+        </article>
+      `).join("");
+    }
+
+    function render() {
+      renderChips();
+
+      const data = displayData();
+      const meta = statusMeta(data.status);
+
+      $("hero").className = `hero ${meta.className}`;
+      $("areaName").textContent = data.area || selectedPlace().name;
+      $("mainLabel").textContent = meta.label;
+      $("statusEmoji").textContent = meta.emoji;
+      $("statusBadge").textContent = meta.badge;
+      $("scoreText").textContent = `${data.score}/100`;
+      $("barFill").style.width = `${data.score}%`;
+      $("message").textContent = data.message;
+      $("timeText").textContent = data.time;
+      $("trendText").textContent = data.trend;
+      $("mainRefreshText").textContent = `${selectedPlace().name} 실시간 조회하기`;
+
+      renderDetails(data);
+    }
+
+    function setLoading(loading) {
+      $("topRefresh").disabled = loading;
+      $("mainRefresh").disabled = loading;
+      $("topRefreshIcon").classList.toggle("spin", loading);
+      $("mainRefreshIcon").classList.toggle("spin", loading);
+      $("mainRefreshText").textContent = loading ? "실시간 조회 중" : `${selectedPlace().name} 실시간 조회하기`;
+    }
+
+    function showError(message) {
+      $("errorText").textContent = message;
+      $("errorBox").style.display = "flex";
+    }
+
+    function hideError() {
+      $("errorBox").style.display = "none";
+    }
+
+    async function fetchLiveData() {
+      const poi = selectedPoi;
+      hideError();
+      setLoading(true);
+
+      try {
+        const res = await fetch(`/api/citydata?poi=${encodeURIComponent(poi)}`);
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "데이터를 불러오지 못했어요.");
+        }
+
+        cache[poi] = data;
+      } catch (error) {
+        showError(error.message || "실시간 데이터를 불러오지 못했어요.");
+      } finally {
+        setLoading(false);
+        render();
+      }
+    }
+
+    $("searchInput").addEventListener("input", renderChips);
+    $("topRefresh").addEventListener("click", fetchLiveData);
+    $("mainRefresh").addEventListener("click", fetchLiveData);
+
+    render();
+    fetchLiveData();
+  </script>
+</body>
+</html>
